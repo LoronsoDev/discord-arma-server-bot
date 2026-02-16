@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:blog.battlemetrics.com)",
+      "WebFetch(domain:community.bistudio.com)",
+      "WebFetch(domain:www.armahq.com)"
+    ]
+  }
+}

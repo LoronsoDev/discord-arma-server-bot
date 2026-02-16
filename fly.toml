@@ -1,0 +1,12 @@
+app = 'discord-arma-bot'
+primary_region = 'cdg'
+
+[build]
+
+[processes]
+  app = "node index.js"
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1

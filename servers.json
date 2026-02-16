@@ -1,0 +1,14 @@
+{
+  "1421928004946493523": {
+    "channel_id": "1422628233173667951",
+    "servers": {
+      "wb1": {
+        "ip": "78.40.111.176",
+        "a2sPort": 20724,
+        "messageId": "1472949293303337014",
+        "battlemetrics": "https://www.battlemetrics.com/servers/reforger/37204874",
+        "onlineSince": 1771248879247
+      }
+    }
+  }
+}
