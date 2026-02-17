@@ -2,3 +2,5 @@ node_modules
 .env
 servers.json
 .claude
+steam_data
+steam_refresh_token.txt

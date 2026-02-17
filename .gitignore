@@ -1,3 +1,5 @@
 node_modules/
 .env
 .claude
+steam_data/
+steam_refresh_token.txt

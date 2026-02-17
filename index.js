@@ -7,7 +7,7 @@ const {
   EmbedBuilder,
   PermissionFlagsBits,
 } = require('discord.js');
-const { queryWithChallenge } = require('./a2s');
+const bohemia = require('./bohemia');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const UPDATE_INTERVAL = 60_000;
@@ -52,29 +52,36 @@ function buildPlayerBar(players, maxPlayers) {
   return filledEmoji.repeat(filled) + '⬛'.repeat(total - filled);
 }
 
-function buildEmbed(name, info, srv) {
-  const playerRatio = info.players / info.maxPlayers;
+function buildEmbed(name, room, srv) {
+  const players = room.playerCount;
+  const maxPlayers = room.playerCountLimit;
   const color = 0x57F287; // verde = online
-  const barEmoji = playerRatio > 0.8 ? '🟪' : playerRatio > 0.4 ? '🟦' : '⬜';
-  const statusIcon = info.players >= info.maxPlayers ? '🔴' : '🟢';
-  const statusText = info.players >= info.maxPlayers ? 'Lleno' : 'Online';
+  const statusIcon = players >= maxPlayers ? '🔴' : '🟢';
+  const statusText = players >= maxPlayers ? 'Lleno' : 'Online';
 
   const uptime = srv.onlineSince ? formatUptime(Date.now() - srv.onlineSince) : 'N/A';
 
-  const description = [
-    `${statusIcon} **${statusText}**` + (srv.battlemetrics ? `\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003🔧 [Ver mods cargados](${srv.battlemetrics})` : ''),
+  const lines = [
+    `${statusIcon} **${statusText}**`,
     '',
-    `👥 **Jugadores:** ${info.players} / ${info.maxPlayers}`,
-    buildPlayerBar(info.players, info.maxPlayers),
+    `👥 **Jugadores:** ${players} / ${maxPlayers}`,
+    buildPlayerBar(players, maxPlayers),
     '',
-    `🗺️ **Mapa:** ${info.map || 'Desconocido'}\u2003\u2003\u2003🕐 **Uptime:** ${uptime}`,
-  ].join('\n');
+    `🗺️ **Mapa:** ${room.scenarioName || 'Desconocido'}\u2003\u2003\u2003🕐 **Uptime:** ${uptime}`,
+  ];
+
+  // Queue info
+  if (room.joinQueue && room.joinQueue.size > 0) {
+    const q = room.joinQueue;
+    const waitText = q.positionAvgWaitTime ? ` (~${q.positionAvgWaitTime}s por posicion)` : '';
+    lines.push(`⏳ **Cola:** ${q.size}/${q.maxSize}${waitText}`);
+  }
 
   return new EmbedBuilder()
     .setColor(color)
-    .setTitle(info.name || name)
-    .setDescription(description)
-    .setFooter({ text: `${name} · Actualizado - ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · Arma Reforger v${info.version || '?'}` });
+    .setTitle(room.name || name)
+    .setDescription(lines.join('\n'))
+    .setFooter({ text: `${name} · Actualizado - ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · Arma Reforger v${room.gameVersion || '?'}` });
 }
 
 function buildOfflineEmbed(name) {
@@ -96,13 +103,14 @@ async function updateAllServers(client) {
     for (const [name, srv] of Object.entries(guildData.servers)) {
       let embed;
       try {
-        const info = await queryWithChallenge(srv.ip, srv.a2sPort);
+        const hostAddress = `${srv.ip}:${srv.gamePort}`;
+        const room = await bohemia.queryServer(hostAddress);
         if (!srv.onlineSince) {
           srv.onlineSince = Date.now();
           saveServers(serversData);
         }
-        embed = buildEmbed(name, info, srv);
-        console.log(`[${new Date().toLocaleTimeString()}] ${guildId}/${name}: ${info.players}/${info.maxPlayers}`);
+        embed = buildEmbed(name, room, srv);
+        console.log(`[${new Date().toLocaleTimeString()}] ${guildId}/${name}: ${room.playerCount}/${room.playerCountLimit}`);
       } catch (err) {
         if (srv.onlineSince) {
           srv.onlineSince = null;
@@ -160,7 +168,6 @@ client.on('interactionCreate', async (interaction) => {
     const name = interaction.options.getString('nombre');
     const ip = interaction.options.getString('ip');
     const port = interaction.options.getInteger('puerto');
-    const battlemetrics = interaction.options.getString('battlemetrics');
 
     if (!serversData[guildId]) {
       serversData[guildId] = {
@@ -175,12 +182,10 @@ client.on('interactionCreate', async (interaction) => {
 
     serversData[guildId].servers[name] = {
       ip,
-      a2sPort: port,
+      gamePort: port,
       messageId: null,
-      battlemetrics: battlemetrics || null,
       onlineSince: null,
     };
-    // Update channel to where the command was used
     serversData[guildId].channel_id = interaction.channelId;
     saveServers(serversData);
 
@@ -188,10 +193,11 @@ client.on('interactionCreate', async (interaction) => {
     const srv = serversData[guildId].servers[name];
     let embed;
     try {
-      const info = await queryWithChallenge(ip, port);
+      const hostAddress = `${ip}:${port}`;
+      const room = await bohemia.queryServer(hostAddress);
       srv.onlineSince = Date.now();
       saveServers(serversData);
-      embed = buildEmbed(name, info, srv);
+      embed = buildEmbed(name, room, srv);
     } catch {
       embed = buildOfflineEmbed(name);
     }
@@ -204,7 +210,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.editReply({ content: `Error enviando el embed: ${err.message}. Verifica los permisos del bot en este canal.` });
     }
 
-    return interaction.editReply({ content: `Servidor **${name}** (\`${ip}:${port}\`) añadido al monitoreo.` });
+    return interaction.editReply({ content: `Servidor **${name}** (\`${ip}:${port}\`) a\u00F1adido al monitoreo.` });
   }
 
   if (interaction.commandName === 'remove') {
@@ -214,7 +220,6 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: `No se encontr\u00F3 el servidor **${name}**.`, ephemeral: true });
     }
 
-    // Try to delete the embed message
     const srv = serversData[guildId].servers[name];
     if (srv.messageId) {
       try {
@@ -241,7 +246,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const lines = Object.entries(serversData[guildId].servers).map(
-      ([name, srv]) => `\u2022 **${name}** \u2014 \`${srv.ip}:${srv.a2sPort}\``
+      ([name, srv]) => `\u2022 **${name}** \u2014 \`${srv.ip}:${srv.gamePort}\``
     );
 
     return interaction.reply({ content: `**Servidores monitoreados:**\n${lines.join('\n')}`, ephemeral: true });
@@ -258,4 +263,14 @@ client.once('ready', () => {
 
 client.on('error', (err) => console.error('Client error:', err.message));
 
-client.login(DISCORD_TOKEN);
+// --- Startup ---
+
+(async () => {
+  try {
+    await bohemia.init();
+    await client.login(DISCORD_TOKEN);
+  } catch (err) {
+    console.error('Fatal startup error:', err.message);
+    process.exit(1);
+  }
+})();

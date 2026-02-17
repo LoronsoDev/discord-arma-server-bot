@@ -1,0 +1,9 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./servers.json:/app/servers.json
+      - ./steam_data:/app/steam_data
+      - ./steam_refresh_token.txt:/app/steam_refresh_token.txt
