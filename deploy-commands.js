@@ -11,6 +11,8 @@ const commands = [
       opt.setName('ip').setDescription('IP del servidor').setRequired(true))
     .addIntegerOption(opt =>
       opt.setName('puerto').setDescription('Puerto del juego (game port, no el A2S)').setRequired(true))
+    .addStringOption(opt =>
+      opt.setName('battlemetrics').setDescription('URL de Battlemetrics (opcional, para ver mods)').setRequired(false))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   new SlashCommandBuilder()

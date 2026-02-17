@@ -62,7 +62,7 @@ function buildEmbed(name, room, srv) {
   const uptime = srv.onlineSince ? formatUptime(Date.now() - srv.onlineSince) : 'N/A';
 
   const lines = [
-    `${statusIcon} **${statusText}**`,
+    `${statusIcon} **${statusText}**` + (srv.battlemetrics ? `\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003🔧 [Ver mods cargados](${srv.battlemetrics})` : ''),
     '',
     `👥 **Jugadores:** ${players} / ${maxPlayers}`,
     buildPlayerBar(players, maxPlayers),
@@ -168,6 +168,7 @@ client.on('interactionCreate', async (interaction) => {
     const name = interaction.options.getString('nombre');
     const ip = interaction.options.getString('ip');
     const port = interaction.options.getInteger('puerto');
+    const battlemetrics = interaction.options.getString('battlemetrics');
 
     if (!serversData[guildId]) {
       serversData[guildId] = {
@@ -184,6 +185,7 @@ client.on('interactionCreate', async (interaction) => {
       ip,
       gamePort: port,
       messageId: null,
+      battlemetrics: battlemetrics || null,
       onlineSince: null,
     };
     serversData[guildId].channel_id = interaction.channelId;
