@@ -166,9 +166,15 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.deferReply({ flags: 64 });
 
     const name = interaction.options.getString('nombre');
-    const ip = interaction.options.getString('ip');
-    const port = interaction.options.getInteger('puerto');
+    const ipRaw = interaction.options.getString('ip');
     const battlemetrics = interaction.options.getString('battlemetrics');
+
+    const parts = ipRaw.split(':');
+    if (parts.length !== 2 || !parts[1] || isNaN(parts[1])) {
+      return interaction.editReply({ content: 'Formato incorrecto. Usa `IP:Puerto`, ej: `78.40.111.176:20744`' });
+    }
+    const ip = parts[0];
+    const port = parseInt(parts[1], 10);
 
     if (!serversData[guildId]) {
       serversData[guildId] = {
