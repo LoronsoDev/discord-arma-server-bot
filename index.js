@@ -269,7 +269,6 @@ client.on('interactionCreate', async (interaction) => {
       srv.ip = parts[0];
       srv.gamePort = parseInt(parts[1], 10);
       srv.onlineSince = null;
-      srv.messageId = null;
     }
 
     if (battlemetrics !== null) {
@@ -292,11 +291,22 @@ client.on('interactionCreate', async (interaction) => {
         embed = buildOfflineEmbed(name);
       }
       try {
-        const newMsg = await channel.send({ embeds: [embed] });
-        srv.messageId = newMsg.id;
-        saveServers(serversData);
+        if (srv.messageId) {
+          const msg = await channel.messages.fetch(srv.messageId).catch(() => null);
+          if (msg) {
+            await msg.edit({ embeds: [embed] });
+          } else {
+            const newMsg = await channel.send({ embeds: [embed] });
+            srv.messageId = newMsg.id;
+            saveServers(serversData);
+          }
+        } else {
+          const newMsg = await channel.send({ embeds: [embed] });
+          srv.messageId = newMsg.id;
+          saveServers(serversData);
+        }
       } catch (err) {
-        return interaction.editReply({ content: `Datos actualizados pero error enviando embed: ${err.message}` });
+        return interaction.editReply({ content: `Datos actualizados pero error editando embed: ${err.message}` });
       }
     }
 
