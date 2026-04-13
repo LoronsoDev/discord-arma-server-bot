@@ -81,7 +81,7 @@ function buildEmbed(name, room, srv) {
     .setColor(color)
     .setTitle(room.name || name)
     .setDescription(lines.join('\n'))
-    .setFooter({ text: `${name} · Actualizado - ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · Arma Reforger v${room.gameVersion || '?'}` });
+    .setFooter({ text: `${name} · Actualizado - ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' })} · Arma Reforger v${room.gameVersion || '?'}` });
 }
 
 function buildOfflineEmbed(name) {
@@ -246,6 +246,65 @@ client.on('interactionCreate', async (interaction) => {
     saveServers(serversData);
 
     return interaction.reply({ content: `Servidor **${name}** eliminado del monitoreo.`, ephemeral: true });
+  }
+
+  if (interaction.commandName === 'update') {
+    await interaction.deferReply({ flags: 64 });
+
+    const name = interaction.options.getString('nombre');
+    const ipRaw = interaction.options.getString('ip');
+    const battlemetrics = interaction.options.getString('battlemetrics');
+
+    if (!serversData[guildId] || !serversData[guildId].servers[name]) {
+      return interaction.editReply({ content: `No se encontró el servidor **${name}**. Usa \`/list\` para ver los disponibles.` });
+    }
+
+    const srv = serversData[guildId].servers[name];
+
+    if (ipRaw) {
+      const parts = ipRaw.split(':');
+      if (parts.length !== 2 || !parts[1] || isNaN(parts[1])) {
+        return interaction.editReply({ content: 'Formato incorrecto. Usa `IP:Puerto`, ej: `78.40.111.176:20744`' });
+      }
+      srv.ip = parts[0];
+      srv.gamePort = parseInt(parts[1], 10);
+      srv.onlineSince = null;
+      srv.messageId = null;
+    }
+
+    if (battlemetrics !== null) {
+      srv.battlemetrics = battlemetrics || null;
+    }
+
+    saveServers(serversData);
+
+    // Forzar actualización inmediata del embed
+    const channel = client.channels.cache.get(serversData[guildId].channel_id);
+    if (channel) {
+      let embed;
+      try {
+        const hostAddress = `${srv.ip}:${srv.gamePort}`;
+        const room = await bohemia.queryServer(hostAddress);
+        srv.onlineSince = Date.now();
+        saveServers(serversData);
+        embed = buildEmbed(name, room, srv);
+      } catch {
+        embed = buildOfflineEmbed(name);
+      }
+      try {
+        const newMsg = await channel.send({ embeds: [embed] });
+        srv.messageId = newMsg.id;
+        saveServers(serversData);
+      } catch (err) {
+        return interaction.editReply({ content: `Datos actualizados pero error enviando embed: ${err.message}` });
+      }
+    }
+
+    const changes = [];
+    if (ipRaw) changes.push(`IP → \`${srv.ip}:${srv.gamePort}\``);
+    if (battlemetrics !== null) changes.push(`Battlemetrics → ${srv.battlemetrics || 'eliminado'}`);
+
+    return interaction.editReply({ content: `Servidor **${name}** actualizado: ${changes.join(', ')}.` });
   }
 
   if (interaction.commandName === 'list') {

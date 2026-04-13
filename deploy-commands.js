@@ -21,6 +21,17 @@ const commands = [
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   new SlashCommandBuilder()
+    .setName('update')
+    .setDescription('Actualiza la IP o Battlemetrics de un servidor existente')
+    .addStringOption(opt =>
+      opt.setName('nombre').setDescription('Nombre del servidor a actualizar').setRequired(true))
+    .addStringOption(opt =>
+      opt.setName('ip').setDescription('Nueva IP:Puerto (opcional)').setRequired(false))
+    .addStringOption(opt =>
+      opt.setName('battlemetrics').setDescription('Nueva URL de Battlemetrics (opcional)').setRequired(false))
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
     .setName('list')
     .setDescription('Lista los servidores monitoreados')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
