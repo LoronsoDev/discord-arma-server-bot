@@ -42,11 +42,12 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 (async () => {
   try {
     console.log('Registrando slash commands...');
-    await rest.put(
+    const result = await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands.map(c => c.toJSON()) },
     );
-    console.log('Slash commands registrados correctamente.');
+    console.log('Slash commands registrados correctamente:');
+    result.forEach(cmd => console.log(` - /${cmd.name} (id: ${cmd.id})`));
   } catch (err) {
     console.error('Error registrando commands:', err);
   }
